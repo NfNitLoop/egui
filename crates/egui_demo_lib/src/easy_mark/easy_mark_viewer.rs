@@ -1,12 +1,30 @@
 use super::easy_mark_parser as easy_mark;
 use egui::{
-    Align, Align2, Hyperlink, Layout, Response, RichText, Sense, Separator, Shape, TextStyle, Ui,
-    vec2,
+    Align, Align2, Color32, Hyperlink, Layout, Response, RichText, Sense, Separator, Shape,
+    TextFormat, TextStyle, Ui, text::LayoutJob, vec2,
 };
 
 /// Parse and display a VERY simple and small subset of Markdown.
 pub fn easy_mark(ui: &mut Ui, easy_mark: &str) {
-    easy_mark_it(ui, easy_mark::Parser::new(easy_mark));
+    // easy_mark_it(ui, easy_mark::Parser::new(easy_mark));
+
+    // We're in top-down layout:
+    let mut layout = *ui.layout();
+    layout.cross_justify = false; // Horizontal justify triggers the bug.
+
+    ui.with_layout(layout, |ui| {
+        // Test cases:
+        ui.label("foo");
+        ui.label("   bar");
+        ui.monospace("    baz");
+
+        // our own LayoutJob for full control:
+        let tf = TextFormat::default();
+        let mut lj = LayoutJob::default();
+        lj.append("", 0.0, tf.clone());
+        lj.append("   wat", 0.0, tf);
+        ui.label(lj);
+    });
 }
 
 pub fn easy_mark_it<'em>(ui: &mut Ui, items: impl Iterator<Item = easy_mark::Item<'em>>) {
@@ -15,7 +33,7 @@ pub fn easy_mark_it<'em>(ui: &mut Ui, items: impl Iterator<Item = easy_mark::Ite
         ui.spacing().interact_size.y, // Assume there will be
     );
 
-    let layout = Layout::left_to_right(Align::BOTTOM).with_main_wrap(true);
+    let layout = Layout::top_down(Align::LEFT).with_main_wrap(false);
 
     ui.allocate_ui_with_layout(initial_size, layout, |ui| {
         ui.spacing_mut().item_spacing.x = 0.0;
@@ -31,6 +49,9 @@ pub fn easy_mark_it<'em>(ui: &mut Ui, items: impl Iterator<Item = easy_mark::Ite
 pub fn item_ui(ui: &mut Ui, item: easy_mark::Item<'_>) {
     let row_height = ui.text_style_height(&TextStyle::Body);
     let one_indent = row_height / 2.0;
+
+    // ui.label(RichText::new(format!("debug: {item:#?}")).color(Color32::DARK_BLUE));
+    // ui.end_row();
 
     match item {
         easy_mark::Item::Newline => {
@@ -92,7 +113,7 @@ pub fn item_ui(ui: &mut Ui, item: easy_mark::Item<'_>) {
         }
         easy_mark::Item::CodeBlock(_language, code) => {
             let where_to_put_background = ui.painter().add(Shape::Noop);
-            let mut rect = ui.monospace(code).rect;
+            let mut rect = ui.label(code).rect;
             rect = rect.expand(1.0); // looks better
             rect.max.x = ui.max_rect().max.x;
             let code_bg_color = ui.visuals().code_bg_color;
