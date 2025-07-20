@@ -110,6 +110,7 @@ pub fn layout(fonts: &mut FontsImpl, job: Arc<LayoutJob>) -> Galley {
     }
 
     let justify = job.justify && job.wrap.max_width.is_finite();
+    // let justify = false;
 
     if justify || job.halign != Align::LEFT {
         let num_rows = rows.len();
@@ -560,13 +561,20 @@ fn halign_and_justify_row(
         return;
     }
 
+    // Note: Leading spaces are significant. (to match behavior when we don't justify).
+    // Remember to account for them in the original width.
+    // DON'T modify the width of leading spaces because it causes the indentation to change.
+    // Only distribute extra space between glyphs after the first non-space glyph.
+    // See: https://github.com/emilk/egui/issues/1272
     let num_leading_spaces = row
         .glyphs
         .iter()
         .take_while(|glyph| glyph.chr.is_whitespace())
         .count();
 
-    let glyph_range = if num_leading_spaces == row.glyphs.len() {
+    // The smallest range including all non-whitespace glyphs.
+    // To justify text, extra spaces will be added to these glyphs.
+    let text_glyph_range = if num_leading_spaces == row.glyphs.len() {
         // There is only whitespace
         (0, row.glyphs.len())
     } else {
@@ -576,14 +584,13 @@ fn halign_and_justify_row(
             .rev()
             .take_while(|glyph| glyph.chr.is_whitespace())
             .count();
-
         (num_leading_spaces, row.glyphs.len() - num_trailing_spaces)
     };
-    let num_glyphs_in_range = glyph_range.1 - glyph_range.0;
+    let num_glyphs_in_range = text_glyph_range.1 - text_glyph_range.0;
     assert!(num_glyphs_in_range > 0, "Should have at least one glyph");
 
-    let original_min_x = row.glyphs[glyph_range.0].logical_rect().min.x;
-    let original_max_x = row.glyphs[glyph_range.1 - 1].logical_rect().max.x;
+    let original_min_x = row.glyphs[0].logical_rect().min.x;
+    let original_max_x = row.glyphs[text_glyph_range.1 - 1].logical_rect().max.x;
     let original_width = original_max_x - original_min_x;
 
     let target_width = if justify && num_glyphs_in_range > 1 {
@@ -592,13 +599,14 @@ fn halign_and_justify_row(
         original_width
     };
 
+    // TODO: The significant spaces are different depending on how we want to align:
     let (target_min_x, target_max_x) = match halign {
         Align::LEFT => (0.0, target_width),
         Align::Center => (-target_width / 2.0, target_width / 2.0),
         Align::RIGHT => (-target_width, 0.0),
     };
 
-    let num_spaces_in_range = row.glyphs[glyph_range.0..glyph_range.1]
+    let num_spaces_in_range = row.glyphs[text_glyph_range.0..text_glyph_range.1]
         .iter()
         .filter(|glyph| glyph.chr.is_whitespace())
         .count();
@@ -624,14 +632,22 @@ fn halign_and_justify_row(
     }
 
     placed_row.pos.x = point_scale.round_to_pixel(target_min_x);
-    let mut translate_x = -original_min_x - extra_x_per_glyph * glyph_range.0 as f32;
 
-    for glyph in &mut row.glyphs {
-        glyph.pos.x += translate_x;
-        glyph.pos.x = point_scale.round_to_pixel(glyph.pos.x);
-        translate_x += extra_x_per_glyph;
+    // Only modify glyphs in range. (leave significant leading/trailing spaces alone)
+    let mut_glyphs_in_range = &mut row.glyphs[text_glyph_range.0..text_glyph_range.1];
+
+    // Note: Don't add small floats in a loop. Has compounding precision errors.
+    // Instead, count and multiply:
+    let mut glyphs = 0.0;
+    let mut spaces = 0.0;
+    for glyph in mut_glyphs_in_range {
+        let translate_x =
+            -original_min_x + (glyphs * extra_x_per_glyph) + (spaces * extra_x_per_space);
+
+        glyph.pos.x = point_scale.round_to_pixel(glyph.pos.x + translate_x);
+        glyphs += 1.0;
         if glyph.chr.is_whitespace() {
-            translate_x += extra_x_per_space;
+            spaces += 1.0;
         }
     }
 

@@ -10,13 +10,13 @@ pub fn easy_mark(ui: &mut Ui, easy_mark: &str) {
 
     // We're in top-down layout:
     let mut layout = *ui.layout();
-    layout.cross_justify = false; // Horizontal justify triggers the bug.
+    // layout.cross_justify = false; // Horizontal justify triggers the bug.
 
     ui.with_layout(layout, |ui| {
         // Test cases:
         ui.label("foo");
         ui.label("   bar");
-        ui.monospace("    baz");
+        ui.monospace("    baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz");
 
         // our own LayoutJob for full control:
         let tf = TextFormat::default();
