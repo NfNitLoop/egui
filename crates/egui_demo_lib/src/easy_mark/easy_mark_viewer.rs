@@ -9,21 +9,40 @@ pub fn easy_mark(ui: &mut Ui, easy_mark: &str) {
     // easy_mark_it(ui, easy_mark::Parser::new(easy_mark));
 
     // We're in top-down layout:
-    let mut layout = *ui.layout();
+    let layout = *ui.layout();
     // layout.cross_justify = false; // Horizontal justify triggers the bug.
 
-    ui.with_layout(layout, |ui| {
+    ui.with_layout(layout.with_cross_align(Align::LEFT), |ui| {
         // Test cases:
-        ui.label("foo");
-        ui.label("   bar");
-        ui.monospace("    baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz baz");
+        // Leading spaces:
+        ui.label("    foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo");
+        // Trailing Spaces:
+        ui.label("bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar    ");
+        // Both:
+        ui.label("    baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz    ");
+    });
 
-        // our own LayoutJob for full control:
-        let tf = TextFormat::default();
-        let mut lj = LayoutJob::default();
-        lj.append("", 0.0, tf.clone());
-        lj.append("   wat", 0.0, tf);
-        ui.label(lj);
+    ui.separator();
+
+    ui.with_layout(layout.with_cross_align(Align::RIGHT), |ui| {
+        // Test cases:
+        // Leading spaces:
+        ui.label("    foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo");
+        // Trailing Spaces:
+        ui.label("bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar    ");
+        // Both:
+        ui.label("    baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz    ");
+    });
+
+    ui.separator();
+    ui.with_layout(layout.with_cross_align(Align::Center), |ui| {
+        // Test cases:
+        // Leading spaces:
+        ui.label("    foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo foo fo foo fooo");
+        // Trailing Spaces:
+        ui.label("bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar bar ba bar baar    ");
+        // Both:
+        ui.label("    baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz baz ba baz baaz    ");
     });
 }
 
